@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BCS Intervention V6</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="BCS V6">
+
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+<style>
+*{box-sizing:border-box}
+body{font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:12px;color:#111}
+.app{max-width:920px;margin:auto;background:#fff;padding:16px;border-radius:12px}
+.header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.logo{width:130px;max-height:80px;object-fit:contain}
+.fiche-num{text-align:right;font-weight:bold}
+h1{text-align:center;text-decoration:underline;margin:8px 0 2px 0;font-size:24px}
+h2{text-align:center;margin:0 0 14px 0;font-size:18px}
+label{font-weight:bold;display:block;margin-top:12px}
+input,select,textarea,button{width:100%;padding:11px;margin-top:5px;font-size:16px;border-radius:6px;border:1px solid #bbb}
+textarea{resize:vertical}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:700px){.grid{grid-template-columns:1fr}}
+.signature-box{margin-top:18px}
+.signature-pad{
+  width:400px;
+  height:150px;
+  max-width:100%;
+  border:1px solid #000;
+  background:#fff;
+  display:block;
+  touch-action:none;
+}
+button{border:none;color:#fff;background:#1f4fd8;font-weight:bold;cursor:pointer}
+button.clear{background:#777}
+button.main{background:#0a8f08;font-size:18px;padding:14px}
+.help{font-size:13px;color:#555;margin-top:6px}
+#printArea{display:none}
+
+@media print{
+  body{background:#fff;margin:0;padding:0}
+  .app{display:none}
+  #printArea{display:block;padding:10mm;font-family:Arial,sans-serif;color:#000}
+  .p-head{display:flex;justify-content:space-between;align-items:flex-start}
+  .p-logo{width:42mm;max-height:22mm;object-fit:contain}
+  .p-num{font-size:10pt;font-weight:bold}
+  .p-title{text-align:center;text-decoration:underline;font-size:16pt;margin:5mm 0 2mm}
+  .p-sub{text-align:center;font-size:11pt;margin-bottom:7mm}
+  .p-line{font-size:10pt;margin-bottom:5mm}
+  .p-comment{border:1px solid #999;min-height:32mm;padding:3mm;font-size:10pt;white-space:pre-wrap}
+  .p-sigs{display:flex;justify-content:space-between;margin-top:12mm}
+  .p-sig-block{width:45%;font-size:10pt}
+  .p-sig-img{width:75mm;height:28mm;border:1px solid #000;object-fit:contain;background:#fff;margin-top:2mm}
+  .p-footer{position:fixed;bottom:8mm;left:10mm;right:10mm;text-align:center;font-size:8pt;line-height:1.4}
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+  <div class="header">
+    <img src="logo-bcs.png" alt="BCS France" class="logo" onerror="this.style.display='none'">
+    <div id="ficheNumber" class="fiche-num"></div>
+  </div>
+
+  <h1>FICHE D’INTERVENTION</h1>
+  <h2>BCS FRANCE SA – Département 3D</h2>
+
+  <label>Référence commande</label>
+  <input id="ref">
+
+  <label>Technicien</label>
+  <select id="tech">
+    <option>Daniel TEULIER</option>
+    <option>Cyril DURAND</option>
+    <option>Lorenzo CHATEAU</option>
+    <option>Dominique CHOQUET</option>
+    <option>Yves AZZOPARDI</option>
+    <option>Mathieu PEREZ</option>
+    <option>Nicolas DANIEL</option>
+  </select>
+
+  <div class="grid">
+    <div><label>Date</label><input id="date" type="date"></div>
+    <div><label>Heure d’arrivée</label><input id="ha" type="time"></div>
+    <div><label>Heure de départ</label><input id="hd" type="time"></div>
+  </div>
+
+  <label>Nom du client</label>
+  <input id="client">
+
+  <label>Adresse</label>
+  <input id="adresse">
+
+  <label>Nuisible traité</label>
+  <select id="nuisible">
+    <option>Rongeurs</option>
+    <option>Blattes</option>
+    <option>Punaises de lit</option>
+    <option>Fourmis</option>
+    <option>Guêpes / Frelons</option>
+    <option>Chenilles processionnaires</option>
+    <option>Pigeons</option>
+    <option>Moustiques</option>
+    <option>Palmier</option>
+    <option>Nettoyage / Désinfection</option>
+  </select>
+
+  <label>Type de traitement</label>
+  <select id="type">
+    <option>Curatif</option>
+    <option>Préventif</option>
+  </select>
+
+  <label>Autre</label>
+  <input id="autre">
+
+  <label>Commentaires</label>
+  <textarea id="com" rows="4"></textarea>
+
+  <div class="signature-box">
+    <strong>Signature client</strong><br>
+    <canvas id="sigClient" class="signature-pad" width="400" height="150"></canvas>
+    <button type="button" class="clear" onclick="clearSignature('sigClient')">Effacer signature client</button>
+  </div>
+
+  <div class="signature-box">
+    <strong>Signature technicien</strong><br>
+    <canvas id="sigTech" class="signature-pad" width="400" height="150"></canvas>
+    <button type="button" class="clear" onclick="clearSignature('sigTech')">Effacer signature technicien</button>
+  </div>
+
+  <button class="main" onclick="genererDocument()">📄 GÉNÉRER LE DOCUMENT</button>
+  <div class="help">PC : téléchargement direct PDF. iPhone : fenêtre d’impression iOS pour enregistrer en PDF.</div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+const { jsPDF } = window.jspdf;
+
+let counter = localStorage.getItem("ficheCounterV6");
+if(!counter){ counter = 1; }
+document.getElementById("ficheNumber").innerText = "N° FICHE : " + counter;
+
+const signatures = {};
+
+function setupSignature(canvasId){
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext("2d");
+  ctx.lineWidth = 2;
+  ctx.lineCap = "round";
+  ctx.strokeStyle = "#000";
+  let drawing = false;
+  let hasInk = false;
+
+  function pos(e){
+    const r = canvas.getBoundingClientRect();
+    const point = e.touches ? e.touches[0] : e;
+    return {
+      x: (point.clientX - r.left) * (canvas.width / r.width),
+      y: (point.clientY - r.top) * (canvas.height / r.height)
+    };
+  }
+
+  function start(e){
+    e.preventDefault();
+    drawing = true;
+    hasInk = true;
+    const p = pos(e);
+    ctx.beginPath();
+    ctx.moveTo(p.x,p.y);
+  }
+
+  function move(e){
+    if(!drawing) return;
+    e.preventDefault();
+    const p = pos(e);
+    ctx.lineTo(p.x,p.y);
+    ctx.stroke();
+  }
+
+  function end(e){
+    if(e) e.preventDefault();
+    drawing = false;
+  }
+
+  canvas.addEventListener("mousedown", start);
+  canvas.addEventListener("mousemove", move);
+  window.addEventListener("mouseup", end);
+
+  canvas.addEventListener("touchstart", start, {passive:false});
+  canvas.addEventListener("touchmove", move, {passive:false});
+  canvas.addEventListener("touchend", end, {passive:false});
+
+  signatures[canvasId] = {
+    clear: function(){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      hasInk = false;
+    },
+    isEmpty: function(){ return !hasInk; },
+    data: function(){ return canvas.toDataURL("image/png"); }
+  };
+}
+
+setupSignature("sigClient");
+setupSignature("sigTech");
+
+function clearSignature(id){ signatures[id].clear(); }
+
+function val(id){ return document.getElementById(id).value || ""; }
+
+function clean(text){
+  return String(text || "").replace(/[^a-zA-Z0-9-_ ]/g,"").replace(/\\s+/g,"_");
+}
+
+function esc(v){
+  return String(v || "").replace(/[&<>"']/g, function(m){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m];
+  });
+}
+
+function isIOS(){
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
+function increment(){
+  localStorage.setItem("ficheCounterV6", parseInt(counter) + 1);
+}
+
+function genererDocument(){
+  if(isIOS()){
+    genererImpressionIOS();
+  } else {
+    telechargerPDFDirect();
+  }
+}
+
+function telechargerPDFDirect(){
+  const doc = new jsPDF();
+  let y = 15;
+
+  doc.setFontSize(16);
+  doc.text("FICHE D’INTERVENTION", 105, y, {align:"center"});
+  y+=8;
+  doc.setFontSize(11);
+  doc.text("BCS FRANCE SA – Département 3D", 105, y, {align:"center"});
+  y+=10;
+
+  doc.setFontSize(10);
+  doc.text("N° Fiche : " + counter, 150, 12);
+  doc.text("Référence commande : " + val("ref"), 10, y); y+=8;
+  doc.text("Technicien : " + val("tech"), 10, y); y+=8;
+  doc.text("Date : " + val("date"), 10, y); y+=8;
+  doc.text("Heure arrivée : " + val("ha") + "    Heure départ : " + val("hd"), 10, y); y+=10;
+  doc.text("Client : " + val("client"), 10, y); y+=8;
+  doc.text("Adresse : " + val("adresse"), 10, y); y+=10;
+  doc.text("Nuisible traité : " + val("nuisible"), 10, y); y+=8;
+  doc.text("Type de traitement : " + val("type"), 10, y); y+=8;
+  doc.text("Autre : " + val("autre"), 10, y); y+=10;
+
+  doc.text("Commentaires :", 10, y); y+=6;
+  const lines = doc.splitTextToSize(val("com"), 180);
+  doc.text(lines, 10, y);
+  y += lines.length * 6 + 12;
+
+  if(!signatures.sigClient.isEmpty()){
+    doc.text("Signature client :", 10, y); y+=6;
+    doc.addImage(signatures.sigClient.data(), "PNG", 10, y, 80, 35);
+  }
+  if(!signatures.sigTech.isEmpty()){
+    doc.text("Signature technicien :", 110, y-6);
+    doc.addImage(signatures.sigTech.data(), "PNG", 110, y, 80, 35);
+  }
+
+  doc.setFontSize(8);
+  doc.text("S.A. à directoire et Conseil de surveillance au capital de 2.325.000€",105,275,{align:"center"});
+  doc.text("Siège social : BCS FRANCE SA 400 Avenue de Roumanille 06410 BIOT",105,280,{align:"center"});
+  doc.text("SIREN 390299790 - RCS ANTIBES - Code NAF 8129A",105,285,{align:"center"});
+
+  const filename = "Fiche_intervention_" + clean(counter) + "_" + clean(val("tech")) + "_" + clean(val("ref") || "Sans_reference") + ".pdf";
+  doc.save(filename);
+  increment();
+}
+
+function genererImpressionIOS(){
+  const clientSig = signatures.sigClient.isEmpty() ? "" : signatures.sigClient.data();
+  const techSig = signatures.sigTech.isEmpty() ? "" : signatures.sigTech.data();
+
+  document.getElementById("printArea").innerHTML =
+    '<div class="p-head">' +
+      '<img src="logo-bcs.png" class="p-logo" onerror="this.style.display=\\'none\\'">' +
+      '<div class="p-num">N° Fiche : ' + esc(counter) + '</div>' +
+    '</div>' +
+    '<div class="p-title">FICHE D’INTERVENTION</div>' +
+    '<div class="p-sub">BCS FRANCE SA – Département 3D</div>' +
+    '<div class="p-line"><strong>Référence commande :</strong> ' + esc(val("ref")) + '</div>' +
+    '<div class="p-line"><strong>Technicien :</strong> ' + esc(val("tech")) + '</div>' +
+    '<div class="p-line"><strong>Date :</strong> ' + esc(val("date")) + '</div>' +
+    '<div class="p-line"><strong>Heure d\\'arrivée :</strong> ' + esc(val("ha")) + ' &nbsp;&nbsp;&nbsp; <strong>Heure de départ :</strong> ' + esc(val("hd")) + '</div>' +
+    '<div class="p-line"><strong>Nom du client :</strong> ' + esc(val("client")) + '</div>' +
+    '<div class="p-line"><strong>Adresse :</strong> ' + esc(val("adresse")) + '</div>' +
+    '<div class="p-line"><strong>Nuisible traité :</strong> ' + esc(val("nuisible")) + '</div>' +
+    '<div class="p-line"><strong>Type de traitement :</strong> ' + esc(val("type")) + '</div>' +
+    '<div class="p-line"><strong>Autre :</strong> ' + esc(val("autre")) + '</div>' +
+    '<div class="p-line"><strong>Commentaires :</strong></div>' +
+    '<div class="p-comment">' + esc(val("com")) + '</div>' +
+    '<div class="p-sigs">' +
+      '<div class="p-sig-block"><strong>Signature client :</strong><br>' + (clientSig ? '<img class="p-sig-img" src="' + clientSig + '">' : '<div class="p-sig-img"></div>') + '</div>' +
+      '<div class="p-sig-block"><strong>Signature technicien :</strong><br>' + (techSig ? '<img class="p-sig-img" src="' + techSig + '">' : '<div class="p-sig-img"></div>') + '</div>' +
+    '</div>' +
+    '<div class="p-footer">' +
+      'S.A. à directoire et Conseil de surveillance au capital de 2.325.000€<br>' +
+      'Siège social : BCS FRANCE SA 400 Avenue de Roumanille 06410 BIOT<br>' +
+      'SIREN 390299790 - RCS ANTIBES - Code NAF 8129A' +
+    '</div>';
+
+  increment();
+  setTimeout(function(){ window.print(); }, 300);
+}
+</script>
+</body>
+</html>
